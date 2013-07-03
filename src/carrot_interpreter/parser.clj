@@ -1,15 +1,43 @@
 (ns carrot-interpreter.parser
   (:use (blancas.kern (core :exclude (parse) :as kern))
-        blancas.kern.lexer.c-style
-        blancas.kern.expr))
+        blancas.kern.expr
+        carrot-interpreter.lexer))
 
-(declare assign)
 (declare condition)
+(declare statement)
 (declare expr)
+(declare block)
 
+(def assign
+  (bind [id identifier
+         _ (token "=")
+         ex expr]
+    (return (list 'set! (symbol id) ex))))
 
+(def var-ref
+  (bind [id identifier]
+    (return (symbol id))))
 
-(declare expr)
+; change to do end syntax
+(def block
+  (bind [_ (token "do") stmts (sep-by new-line (fwd statement)) _ (token "end")]
+    (return (apply list stmts))))
+
+(defn- begin
+  [ast]
+  (if (= (count ast) 1)
+    (first ast)
+    (list* 'begin ast)))
+
+(def condition
+  (bind [_ (token "if")
+         conditional (parens expr)
+         consequent block
+         alternative (optional (>> (token "else") block))]
+    (return
+      (if alternative
+        (list 'if conditional (begin consequent) (begin alternative))
+        (list 'if conditional (begin consequent))))))
 
 (def fun-tbl
   "Definition of built-in functions."
@@ -50,9 +78,15 @@
 
 
 
-(def statement (<|> (<:> assign) condition expr))
+(def statement (<|> (<:> assign) condition string-lit (<:> (fwd block)) expr))
 
 (def program (bind [statements (many1 statement)]
                 (return (apply list statements))))
 
-(defn parse [input] '())
+(defn parse
+  ([input] (parse input program))
+  ([input parser] 
+   (let [result (kern/parse parser input)]
+     (when-not (:ok result)
+       (println "I failed"))
+     (:value result))))

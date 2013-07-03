@@ -2,4 +2,4 @@
 
 (defn default-env [] '())
 
-(defn evaluate [] '())
+(defn evaluate [& args] args)
