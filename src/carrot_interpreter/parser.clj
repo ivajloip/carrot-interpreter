@@ -28,7 +28,8 @@
          function-name identifier
          params (parens (sep-by comma identifier))
          body block]
-    (return (list* 'function (symbol function-name)
+    (return (list* 'function
+                   (symbol function-name)
                    (apply list (map symbol params))
                    body))))
 
@@ -42,19 +43,12 @@
   (bind [_ (token "if")
          conditional (parens expr)
          consequent block
+         _ (optional new-line)
          alternative (optional (>> (token "else") block))]
     (return
       (if alternative
         (list 'if conditional (begin consequent) (begin alternative))
         (list 'if conditional (begin consequent))))))
-
-(def fun-tbl
-  "Definition of built-in functions."
-  {"abs"   #(Math/abs %)   "atan" #(Math/atan %)      "cos"  #(Math/cos %)
-   "exp"   #(Math/exp %)   "int"  #(Math/round %)     "log"  #(Math/log %)
-   "log10" #(Math/log10 %) "sin"  #(Math/sin %)       "sqrt" #(Math/sqrt %)
-   "tan"   #(Math/tan %)   "tanh" #(Math/tanh %)      "ceil" #(Math/ceil %)
-   "floor" #(Math/floor %) "deg"  #(Math/toDegrees %) "rad"  #(Math/toRadians %)})
 
 (def funcall
   (bind [func (<|> (fwd var-ref) (parens (fwd expr)))
@@ -105,14 +99,6 @@
 ;; uni-op operators have the highest precedence while the and-op
 ;; operator has the lowest.
 
-;(def unary (prefix1 factor uni-op))  ;; -(10), !(3>0)
-;(def power (chainr1 unary  pow-op))  ;; 2^32
-;(def term  (chainl1 power  mul-op))  ;; 3 * 34 * ...
-;(def sum   (chainl1 term   add-op))  ;; 5 + 2*3 + ...
-;(def relex (chainl1 sum    rel-op))  ;; sin(0.5) > 0
-;(def orex  (chainl1 relex  or-op))   ;; sqrt(10) > 0 || tan(0) == 1 || ...
-;(def expr  (chainl1 orex   and-op))  ;; sqrt(10) > 0 && tan(0) == 1 || sin(0) > 0 & ...
-
 (def unary (prefix1 factor (ops "!" "-")))
 (def power (chainr1 unary  (ops "^")))
 (def term  (chainl1 power  (ops "*" "/" "%")))
@@ -121,13 +107,12 @@
 (def orex  (chainl1 relex  (rename "&&" 'and)))
 (def expr  (chainl1 orex   (rename "||" 'or)))
 
-
-
-
-
-
-
-(def statement (<|> (<:> assign) condition (<:> (fwd function-def)) string-lit (<:> (fwd block)) expr))
+(def statement (<|> (<:> assign)
+                    condition
+                    (<:> (fwd function-def))
+                    string-lit
+                    (<:> (fwd block))
+                    expr))
 
 (def program (bind [statements (many1 statement)]
                 (return (apply list statements))))
@@ -137,5 +122,6 @@
   ([input parser] 
    (let [result (kern/parse parser input)]
      (when-not (:ok result)
-       (println "I failed"))
+       (print-error result)
+       (throw (RuntimeException. "Parsing failed")))
      (:value result))))
