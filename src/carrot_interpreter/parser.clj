@@ -18,10 +18,19 @@
   (bind [id identifier]
     (return (symbol id))))
 
-; change to do end syntax
 (def block
   (bind [_ (token "do") stmts (sep-by new-line (fwd statement)) _ (token "end")]
     (return (apply list stmts))))
+
+
+(def function-def
+  (bind [_ (token "def")
+         function-name identifier
+         params (parens (sep-by comma identifier))
+         body block]
+    (return (list* 'function (symbol function-name)
+                   (apply list (map symbol params))
+                   body))))
 
 (defn- begin
   [ast]
@@ -78,7 +87,7 @@
 
 
 
-(def statement (<|> (<:> assign) condition string-lit (<:> (fwd block)) expr))
+(def statement (<|> (<:> assign) condition (<:> (fwd function-def)) string-lit (<:> (fwd block)) expr))
 
 (def program (bind [statements (many1 statement)]
                 (return (apply list statements))))

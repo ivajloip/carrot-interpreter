@@ -24,6 +24,7 @@
 (def parens     (:parens     rec))
 (def braces     (:braces     rec))
 (def comma-sep  (:comma-sep  rec))
+(def comma      (:comma      rec))
 (def token      (:token      rec))
 
 (def identifier (:identifier rec))
