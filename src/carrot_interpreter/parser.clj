@@ -8,6 +8,8 @@
 (declare expr)
 (declare block)
 
+(def key-words #{"end" "do" "def"})
+
 (def assign
   (bind [id identifier
          _ (token "=")
@@ -16,11 +18,16 @@
 
 (def var-ref
   (bind [id identifier]
-    (return (symbol id))))
+    (if (get key-words id)
+      (fail (str id " is a reserved word"))
+      (return (symbol id)))))
 
 (def block
-  (bind [_ (token "do") stmts (sep-by new-line (fwd statement)) _ (token "end")]
-    (return (apply list stmts))))
+  (bind [_ (token "do")
+         _ new-line
+         stmts (many1 (<*> (fwd statement) new-line))
+         _ (token "end")]
+    (return (apply list (map first stmts)))))
 
 
 (def function-def
@@ -54,16 +61,11 @@
   (bind [func (<|> (fwd var-ref) (parens (fwd expr)))
          exprs (parens (sep-by comma expr))]
       (return (list* func exprs))))
-;"This parser corresponds a syntax rule: FUN := ID (expr)
-; It returns the result of applying the primitive function to the
-; result of the expression."
-;  (bind [id identifier ex (parens expr)]
-;      (return ((fun-tbl id) ex))))
 
 (def factor
   "Evaluates a number (double), a call to a buil-in function, or an
    expression in parens to (for example) change the order of evaluation."
-  (<|> float-lit (<:> funcall) var-ref (parens (fwd expr))))
+  (<|> float-lit (<:> funcall) (<:> var-ref) (parens (fwd expr))))
 
 (defn prefix1
   [p op]
@@ -97,8 +99,7 @@
 ;; Chain calls parse multiple occurrences of a kind of operator
 ;; working on operands that may be expressions. In this case,
 ;; uni-op operators have the highest precedence while the and-op
-;; operator has the lowest.
-
+;; operator has the lowest.  
 (def unary (prefix1 factor (ops "!" "-")))
 (def power (chainr1 unary  (ops "^")))
 (def term  (chainl1 power  (ops "*" "/" "%")))
