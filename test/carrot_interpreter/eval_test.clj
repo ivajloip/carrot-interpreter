@@ -109,5 +109,59 @@
       (modify env 'variable 3.0)
       (is (= (get @(:bindings env) 'variable) 3.0)))))
 
+; -------------- eval-if -------------------
 
+(deftest eval-if-evaluates-then
+  (testing "Eval-if evaluates then if it is present and cond is true"
+    (stubbing [evaluate true]
+              (eval-if '(if :cond :correct :incorrect) {})
+              (verify-call-times-for evaluate 2)
+              (verify-first-call-args-for evaluate :cond {})
+              (verify-nth-call-args-for 2 evaluate :correct {}))))
+
+(deftest eval-if-evaluates-alternative
+  (testing "Eval-if evaluates alternative if it is present and cond is false"
+    (stubbing [evaluate false]
+              (eval-if '(if :cond :incorrect :correct) {})
+              (verify-call-times-for evaluate 2)
+              (verify-first-call-args-for evaluate :cond {})
+              (verify-nth-call-args-for 2 evaluate :correct {})))
+  (testing "eval-if behaves ok when there is no alternative and cond is false"
+    (stubbing [evaluate false]
+              (let [result (eval-if '(if :cond :incorrect) {})]
+                (verify-call-times-for evaluate 1)
+                (verify-first-call-args-for evaluate :cond {})
+                (is (not result))))))
+
+; -------------- eval-return -------------------
+
+(deftest eval-return-marks-for-return
+  (testing (str "Eval-return marks the environment that an return has occured"
+                "and returns the value of the expression")
+    (stubbing [evaluate :value modify :false]
+              (is (= (eval-return '(return ast) {}) :value))
+              (verify-call-times-for modify 1)
+              (verify-call-times-for evaluate 1)
+              (verify-first-call-args-for modify {} :return true)
+              (verify-first-call-args-for evaluate 'ast {}))))
+
+; -------------- evaluate -------------------
+
+; -------------- eval-begin -------------------
+(deftest eval-begin-stops-on-return
+  (testing "Eval-begin stops when return appears in bindings" 
+    (stubbing [evaluate :value]
+              (let [env (create-env {:return true})]
+                (is (= (eval-begin '(begin x y) env) :value))
+                (verify-call-times-for evaluate 1)
+                (verify-first-call-args-for evaluate 'x env)))))
+
+
+; -------------- return, evaluate, modify and block -------------------
+
+(deftest return-directly-in-code-bloc
+  (testing "Eval-begin works correctly when return is present" 
+    (let [env (create-env {'x :value})]
+      (is (= (eval-begin '(begin (return x) y) env) :value))
+      (is (= (:return @(:bindings env)) true)))))
 

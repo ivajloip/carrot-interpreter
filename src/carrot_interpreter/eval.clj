@@ -62,12 +62,34 @@
   (modify env var-name (evaluate expr env))
   nil)
 
+(defn eval-if
+  [[_ condition consequent alternative] env]
+  (if (evaluate condition env)
+    (evaluate consequent env)
+    (if alternative
+      (evaluate alternative env))))
+
+(defn eval-begin
+  [[_ & asts] env]
+  (loop [asts asts]
+    (let [statement-value (evaluate (first asts) env)]
+      (if (or (= (count asts) 1) (:return @(:bindings env)))
+        statement-value
+        (recur (rest asts))))))
+
+(defn eval-return
+  [[_ ast] env]
+  (modify env :return true)
+  (evaluate ast env))
+
 (defn evaluate
   [ast env]
   (cond (number? ast) ast
         (symbol? ast) (lookup env ast)
         (type? ast 'function) (make-function ast env)
         (type? ast 'set!) (eval-set ast env)
+        (type? ast 'return) (eval-return ast env)
+        (type? ast 'if) (eval-if ast env)
         :else ast
         ;(tag? ast '*) (lift * ast env)
         ;(tag? ast 'if) (eval-if ast env)
