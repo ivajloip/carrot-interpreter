@@ -1,12 +1,13 @@
 (ns carrot-interpreter.parser
   (:use (blancas.kern (core :exclude (parse) :as kern))
-        ;blancas.kern.expr
         carrot-interpreter.lexer))
 
 (declare condition)
 (declare statement)
 (declare expr)
 (declare block)
+(declare return-stm)
+(declare class-stm)
 
 (def key-words #{"end" "do" "def"})
 
@@ -108,15 +109,22 @@
 (def orex  (chainl1 relex  (rename "&&" 'and)))
 (def expr  (chainl1 orex   (rename "||" 'or)))
 
+(def return-stm (bind [_ (token "return") ex expr]
+                      (return (list 'return ex))))
+
+(def class-stm (bind [_ (token "class") name identifier body program]
+                      (return (list* 'class (symbol name) (begin body)))))
+
 (def statement (<|> (<:> assign)
                     condition
                     (<:> (fwd function-def))
                     string-lit
                     (<:> (fwd block))
+                    (<:> (fwd return-stm))
                     expr))
 
 (def program (bind [statements (many1 statement)]
-                (return (apply list statements))))
+                   (return (apply list statements))))
 
 (defn parse
   ([input] (parse input program))

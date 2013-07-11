@@ -1,6 +1,7 @@
 (ns carrot-interpreter.parser-test
     (:use clojure.test
           (blancas.kern (core :exclude (parse) :as kern))
+          conjure.core
           carrot-interpreter.lexer
           carrot-interpreter.parser))
 
@@ -134,6 +135,10 @@
   (testing "Parsing key-word def fails a variable references"
     (is (not (:ok (kern/parse var-ref "def"))))))
 
+(deftest var-ref-does-not-parse-return
+  (testing "Parsing key-word return fails a variable references"
+    (is (not (:ok (kern/parse var-ref "return"))))))
+
 ; -------------- block -------------------
 
 (deftest block-parses-simple-code-block
@@ -176,3 +181,26 @@
   (testing "Parsing a function call with many arguments"
     (is (= (:value (kern/parse funcall "foo(x, y)")) '(foo x y)))))
 
+; -------------- return-stm -------------------
+
+(deftest return-stm-parses-return-statements
+  (testing "Parsing a return statement with factor"
+    (is (= (:value (kern/parse return-stm "return x")) '(return x))))
+  (testing "Parsing a return statement with expression"
+    (is (= (:value (kern/parse return-stm "return x * x)")) '(return (* x x))))))
+
+; -------------- return-stm -------------------
+
+(deftest class-stm-parses-simplest-class
+  (testing "Parsing a simple class definition"
+    (is (= (:value (kern/parse class-stm "class Foo do 
+                                            3
+                                          end")) '(class Foo 3.0)))))
+
+(deftest class-stm-parses-class-with-function
+  (testing "Parsing a simple class definition with funciton definition"
+    (is (= (:value (kern/parse class-stm "class Foo do 
+                                            def test (x) do
+                                              x
+                                            end
+                                          end")) '(class Foo (function test (x) x))))))
