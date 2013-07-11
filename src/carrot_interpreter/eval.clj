@@ -71,6 +71,7 @@
 
 (defn eval-begin
   [[_ & asts] env]
+  (println :begin asts env)
   (loop [asts asts]
     (let [statement-value (evaluate (first asts) env)]
       (if (or (= (count asts) 1) (:return @(:bindings env)))
@@ -82,22 +83,28 @@
   (modify env :return true)
   (evaluate ast env))
 
+(defn invoke-func
+  [func params]
+  (cond (= (:kind func) :primitive)
+        (apply (:code func) params)
+
+        (= (:kind func) :function)
+        (evaluate (:body func)
+                  (extend-env (zipmap (:args func) params)
+                              (:env func)))
+
+        :else
+        (error "Don't know how to invoke: " func)))
+
 (defn evaluate
   [ast env]
-  (cond (number? ast) ast
+  (cond (or (true? ast) (false? ast) (number? ast)) ast
         (symbol? ast) (lookup env ast)
         (type? ast 'function) (make-function ast env)
         (type? ast 'set!) (eval-set ast env)
         (type? ast 'return) (eval-return ast env)
         (type? ast 'if) (eval-if ast env)
-        :else ast
-        ;(tag? ast '*) (lift * ast env)
-        ;(tag? ast 'if) (eval-if ast env)
-
-        ;(tag? ast 'begin) (eval-begin ast env)
-        ;(tag? ast 'lambda) (make-lambda ast env)
-
-        ;:else
-        ;(invoke (evaluate (first ast) env)
-        ;        (map #(evaluate % env) (rest ast)))))
-))
+        (type? ast 'begin) (eval-begin ast env)
+        :else 
+        (invoke-func (evaluate (first ast) env)
+                (map #(evaluate % env) (rest ast)))))

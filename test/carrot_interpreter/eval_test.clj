@@ -6,8 +6,11 @@
 ; -------------- helpers -------------------
 
 (defn create-env 
-  ([bindings] {:bindings (atom bindings) :parent nil})
-  ([bindings parent] {:bindings (atom bindings) :parent parent}))
+  ([bindings] (create-env bindings nil))
+  ([bindings parent] {:bindings (atom (conj bindings
+                                            ['true true]
+                                            ['false false]))
+                      :parent parent}))
 
 ; -------------- eval-set -------------------
 
@@ -148,6 +151,16 @@
 ; -------------- evaluate -------------------
 
 ; -------------- eval-begin -------------------
+(deftest eval-begin-multiple-ops
+  (testing "Eval-begin invokes evaluate on all statements if no return" 
+    (stubbing [evaluate :value]
+              (let [env (create-env {})]
+                (eval-begin '(begin x y z) env)
+                (verify-call-times-for evaluate 3)
+                (verify-first-call-args-for evaluate 'x env)
+                (verify-nth-call-args-for 2 evaluate 'y env)
+                (verify-nth-call-args-for 3 evaluate 'z env)))))
+
 (deftest eval-begin-stops-on-return
   (testing "Eval-begin stops when return appears in bindings" 
     (stubbing [evaluate :value]
@@ -159,9 +172,53 @@
 
 ; -------------- return, evaluate, modify and block -------------------
 
-(deftest return-directly-in-code-bloc
+(deftest return-directly-in-code-block
   (testing "Eval-begin works correctly when return is present" 
     (let [env (create-env {'x :value})]
       (is (= (eval-begin '(begin (return x) y) env) :value))
       (is (= (:return @(:bindings env)) true)))))
+
+; -------------- return, evaluate, eval-if, modify and block -------------------
+
+(deftest return-directly-in-if-in-code-block
+  (testing "Eval-begin works correctly when return is reached in if statement" 
+    (let [env (create-env {'x :value})]
+      (is (= (eval-begin '(begin (if true (return x) y) z) env) :value))
+      (is (= (:return @(:bindings env)) true)))))
+
+(deftest return-is-skiped-in-if-in-code-block
+  (testing "Eval-begin works correctly when return is skiped in if statement" 
+    (let [env (create-env {'z :value 'y :incorrect})]
+      (is (= (eval-begin '(begin (if false (return x) y) z) env) :value))
+      (is (= (:return @(:bindings env)) nil)))))
+
+; -------------- invoke-func -------------------
+
+(deftest invoke-func-works-for-primitive
+  (testing "Invoke-func calls the function body with the correct args for
+           primitive functions"
+    (is (= (invoke-func {:kind :primitive :code *} '(2 3)) 6))))
+
+(deftest invoke-func-fails-for-unknown-kind
+  (testing "Invoke-func fails for kind :unknown"
+    (is (thrown-with-msg? RuntimeException
+                          #"^Don't know how to invoke.*$"
+                          (invoke-func {:kind :unknown} '())))))
+
+(deftest invoke-func-works-for-carrot-functions
+  (testing "Invoke-func evaluates the body of an carrot function with the
+           correct args"
+    (stubbing [evaluate :value extend-env {:key :val}]
+              (is (= (invoke-func {:kind :function
+                                   :args '(x y)
+                                   :body '(begin x y)
+                                   :env :environment
+                                   }
+                                  '(2 3))
+                     :value))
+              (verify-call-times-for evaluate 1)
+              (verify-first-call-args-for evaluate '(begin x y) {:key :val})
+              (verify-call-times-for extend-env 1)
+              (verify-first-call-args-for extend-env {'x 2 'y 3} :environment))))
+
 
