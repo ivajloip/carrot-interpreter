@@ -22,8 +22,8 @@
   {:bindings (atom bindings) :parent parent})
 
 (defn primitive
-  [func]
-  {:kind :primitive :code func})
+  [clojure-func]
+  {:kind :primitive :code clojure-func})
 
 (defn default-env
   []
