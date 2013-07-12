@@ -153,6 +153,10 @@
   (testing "Parsing a nested code block"
     (is (= (:value (kern/parse block "do\ndo\n3\nend\n4\nend")) '((3.0) 4.0)))))
 
+(deftest block-parses-blocks-with-empty-lines
+  (testing "Parsing code block with empty lines succeeds"
+    (is (= (:value (kern/parse block "do\n3\n\n4\nend") '(3.0 4.0))))))
+
 ; -------------- function-def -------------------
 
 (deftest function-def-parses-function-definitions
@@ -187,7 +191,8 @@
   (testing "Parsing a return statement with factor"
     (is (= (:value (kern/parse return-stm "return x")) '(return x))))
   (testing "Parsing a return statement with expression"
-    (is (= (:value (kern/parse return-stm "return x * x)")) '(return (* x x))))))
+    (is (= (:value (kern/parse return-stm "return x * x)"))
+           '(return (* x x))))))
 
 ; -------------- return-stm -------------------
 
@@ -203,7 +208,21 @@
                                             def test (x) do
                                               x
                                             end
-                                          end")) '(class Foo (function test (x) x))))))
+                                          end"))
+           '(class Foo (function test (x) x))))))
+
+(deftest class-stm-parses-class-with-few-function
+  (testing "Parsing a simple class definition with a few funciton definition"
+    (is (= (:value (kern/parse class-stm "class Foo do 
+                                            def test (x) do
+                                              x
+                                            end
+
+                                            def foo (x) do
+                                              x
+                                            end
+                                          end"))
+           '(class Foo (begin (function test (x) x) (function foo (x) x)))))))
 
 ; -------------- dot-op -------------------
 
@@ -215,4 +234,6 @@
   (testing "Dot-op parses object method access"
     (is (= (:value (kern/parse dot-op "x.y()")) '(dot x (y)))))
   (testing "Dot-op parses method invokation result as object"
-    (is (= (:value (kern/parse dot-op "x().y")) '(dot (x) y)))))
+    (is (= (:value (kern/parse dot-op "x().y")) '(dot (x) y))))
+  (testing "Dot-op parses object property assignment"
+    (is (= (:value (kern/parse dot-op "x.y = 3")) '(dot x (set! y 3.0))))))

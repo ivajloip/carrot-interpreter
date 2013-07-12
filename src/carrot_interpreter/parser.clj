@@ -27,7 +27,7 @@
 (def block
   (bind [_ (token "do")
          _ new-line
-         stmts (many1 (<*> (fwd statement) new-line))
+         stmts (many1 (<*> (fwd statement) (many1 new-line)))
          _ (token "end")]
     (return (apply list (map first stmts)))))
 
@@ -114,11 +114,14 @@
                       (return (list 'return ex))))
 
 (def class-stm (bind [_ (token "class") name identifier body block]
-                      (return (list* 'class (symbol name) body))))
+                      (return (list 'class (symbol name) (begin body)))))
 
 (def dot-op (bind [object (<|> (<:> funcall) var-ref)
                        _ (token ".")
-                       prop (<|> (<:> dot-op) (<:> funcall) var-ref)]
+                       prop (<|> (<:> dot-op)
+                                 (<:> funcall)
+                                 (<:> assign)
+                                 var-ref)]
                       (return (list 'dot object prop))))
 
 (def statement (<|> (<:> assign)
