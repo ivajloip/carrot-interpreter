@@ -27,13 +27,19 @@
 
 (defn default-env
   []
-  (extend-env {'print (primitive prn)
-               'twice (primitive (fn [a] (+ a a)))
-               '+ (primitive +)
-               '* (primitive *)
-               '== (primitive =)
-               '- (primitive -)}
-              (empty-env)))
+  (let [mappings [+ * / - > < >= <=]
+        opearations    ['+ '* '/ '- '> '< '>= '<=]
+        bindings (conj {'print (primitive prn)
+                        '== (primitive =)
+                        (symbol "^") (primitive (fn [x y]
+                                                  (java.lang.Math/pow x y)))
+                        '! (primitive not)
+                        (symbol "false") false
+                        (symbol "true") true
+                        (symbol "nil") nil
+                        '!= (primitive (fn [x y] (not (= x y))))}
+                       (zipmap opearations (map primitive mappings)))]
+    (extend-env bindings (empty-env))))
 
 (defn type? 
   [ast tag]
