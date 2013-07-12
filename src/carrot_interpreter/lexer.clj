@@ -7,8 +7,16 @@
   (assoc lex/basic-def
          :comment-start       "(*"
          :comment-end         "*)"
-         :identifier-letter   (<|> alpha-num (one-of* "_-!?"))
-         :reserved-names      ["while" "if" "else" "read" "print" "return" "fun" "proc"]
+         :identifier-letter   (<|> alpha-num (one-of* "_-?"))
+         :reserved-names      ["end"
+                               "do"
+                               "extends"
+                               "if"
+                               "else"
+                               "return"
+                               "def"
+                               "class"
+                               "module"]
          :case-sensitive      true
          :trim-newline        false))
 
