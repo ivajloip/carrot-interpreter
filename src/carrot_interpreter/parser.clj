@@ -8,6 +8,7 @@
 (declare block)
 (declare return-stm)
 (declare class-stm)
+(declare dot-op)
 
 (def key-words #{"end" "do" "def"})
 
@@ -112,8 +113,13 @@
 (def return-stm (bind [_ (token "return") ex expr]
                       (return (list 'return ex))))
 
-(def class-stm (bind [_ (token "class") name identifier body program]
-                      (return (list* 'class (symbol name) (begin body)))))
+(def class-stm (bind [_ (token "class") name identifier body block]
+                      (return (list* 'class (symbol name) body))))
+
+(def dot-op (bind [object (<|> (<:> funcall) var-ref)
+                       _ (token ".")
+                       prop (<|> (<:> dot-op) (<:> funcall) var-ref)]
+                      (return (list 'dot object prop))))
 
 (def statement (<|> (<:> assign)
                     condition
@@ -134,3 +140,4 @@
        (print-error result)
        (throw (RuntimeException. "Parsing failed")))
      (:value result))))
+

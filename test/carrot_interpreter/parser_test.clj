@@ -204,3 +204,15 @@
                                               x
                                             end
                                           end")) '(class Foo (function test (x) x))))))
+
+; -------------- dot-op -------------------
+
+(deftest dot-op-parses-object-field-or-method-access
+  (testing "Dot-op parses object field access"
+    (is (= (:value (kern/parse dot-op "x.y")) '(dot x y))))
+  (testing "Dot-op parses chained object field access"
+    (is (= (:value (kern/parse dot-op "x.y.z")) '(dot x (dot y z)))))
+  (testing "Dot-op parses object method access"
+    (is (= (:value (kern/parse dot-op "x.y()")) '(dot x (y)))))
+  (testing "Dot-op parses method invokation result as object"
+    (is (= (:value (kern/parse dot-op "x().y")) '(dot (x) y)))))
