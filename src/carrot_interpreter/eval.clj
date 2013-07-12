@@ -47,7 +47,7 @@
           parent (recur parent)
           :else (swap! (:bindings original-env) assoc var-name value))))
 
-(defn make-function 
+(defn eval-function 
   [[_ function-name args & body] env]
   (modify env 
           function-name
@@ -71,7 +71,6 @@
 
 (defn eval-begin
   [[_ & asts] env]
-  (println :begin asts env)
   (loop [asts asts]
     (let [statement-value (evaluate (first asts) env)]
       (if (or (= (count asts) 1) (:return @(:bindings env)))
@@ -83,15 +82,64 @@
   (modify env :return true)
   (evaluate ast env))
 
+(defn make-constructor
+  [name]
+  {:kind :constructor
+   :class name})
+
+(defn make-default-initialize
+  [parent]
+  (if parent
+    '(function initialize () (dot super (initialize)))
+    '(function initialize () nil)))
+      
+(defn eval-class 
+  [[_ name body parent] env]
+  (let [parent-bindings (if parent @(:bindings (:env (lookup env parent))) {})
+        class-env (extend-env (conj parent-bindings
+                                    ['new (make-constructor name)])
+                              env)]
+    (evaluate (make-default-initialize parent) class-env)
+    (evaluate body class-env)
+    (modify env
+            name
+            {:kind :class
+             :parent parent
+             :env class-env}))
+  (str "#'" name))
+
+(defn eval-dot
+  [[_ reciever-name message] env]
+  (let [reciever (evaluate reciever-name env)]
+    (evaluate message (conj (:env reciever) [:parent env]))))
+
+(defn create-new-object
+  [func params env]
+  (let [parent-class (:class func)
+        parent (lookup env parent-class)
+        new-env (extend-env @(:bindings (:env parent)) env)
+        obj {:env new-env :class parent-class :kind :object}]
+    (if-let [parent-parent-class (:parent parent)]
+            (modify new-env 'super (create-new-object
+                                     (lookup (:env parent-parent-class)
+                                             'new)
+                                     params
+                                     new-env)))
+    (modify new-env 'this obj)
+    (eval-dot (list 'dot 'this (list* 'initialize params)) new-env)))
+
+
 (defn invoke-func
-  [func params]
+  [func params env]
   (cond (= (:kind func) :primitive)
         (apply (:code func) params)
 
         (= (:kind func) :function)
         (evaluate (:body func)
-                  (extend-env (zipmap (:args func) params)
-                              (:env func)))
+                  (extend-env (zipmap (:args func) params) env))
+
+        (= (:kind func) :constructor)
+        (create-new-object func params env)
 
         :else
         (error "Don't know how to invoke: " func)))
@@ -100,11 +148,14 @@
   [ast env]
   (cond (or (true? ast) (false? ast) (number? ast)) ast
         (symbol? ast) (lookup env ast)
-        (type? ast 'function) (make-function ast env)
+        (type? ast 'function) (eval-function ast env)
         (type? ast 'set!) (eval-set ast env)
         (type? ast 'return) (eval-return ast env)
         (type? ast 'if) (eval-if ast env)
         (type? ast 'begin) (eval-begin ast env)
+        (type? ast 'class) (eval-class ast env)
+        (type? ast 'dot) (eval-dot ast env)
         :else 
         (invoke-func (evaluate (first ast) env)
-                (map #(evaluate % env) (rest ast)))))
+                     (map #(evaluate % env) (rest ast))
+                     env)))

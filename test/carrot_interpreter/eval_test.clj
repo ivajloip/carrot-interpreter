@@ -84,12 +84,12 @@
            (deref (:bindings extended-env)) {:a 1}
            (:parent extended-env) {:b 2}))))
 
-; -------------- make-function -------------------
+; -------------- eval-function -------------------
 
-(deftest make-function-adds-carrot-function-to-env
-  (testing "Make-function adds carrot function to the environmet"
+(deftest eval-function-adds-carrot-function-to-env
+  (testing "eval-function adds carrot function to the environmet"
     (let [env (create-env {})]
-      (make-function [:foo 'func '(x y) 'x 'x 'y] env)
+      (eval-function [:foo 'func '(x y) 'x 'x 'y] env)
       (let [func (get @(:bindings env) 'func)]
         (are [expected actual]
              (= expected actual)
@@ -197,13 +197,13 @@
 (deftest invoke-func-works-for-primitive
   (testing "Invoke-func calls the function body with the correct args for
            primitive functions"
-    (is (= (invoke-func {:kind :primitive :code *} '(2 3)) 6))))
+    (is (= (invoke-func {:kind :primitive :code *} '(2 3) :env) 6))))
 
 (deftest invoke-func-fails-for-unknown-kind
   (testing "Invoke-func fails for kind :unknown"
     (is (thrown-with-msg? RuntimeException
                           #"^Don't know how to invoke.*$"
-                          (invoke-func {:kind :unknown} '())))))
+                          (invoke-func {:kind :unknown} '() :env)))))
 
 (deftest invoke-func-works-for-carrot-functions
   (testing "Invoke-func evaluates the body of an carrot function with the
@@ -214,11 +214,101 @@
                                    :body '(begin x y)
                                    :env :environment
                                    }
-                                  '(2 3))
+                                  '(2 3) 
+                                  :environment)
                      :value))
               (verify-call-times-for evaluate 1)
               (verify-first-call-args-for evaluate '(begin x y) {:key :val})
               (verify-call-times-for extend-env 1)
               (verify-first-call-args-for extend-env {'x 2 'y 3} :environment))))
 
+(deftest invoke-func-works-for-constructor
+  (testing "Invoke-func calls create-new-object on constructor"
+    (stubbing [create-new-object :value]
+              (is (= (invoke-func {:kind :constructor} :params :env) :value))
+              (verify-call-times-for create-new-object 1)
+              (verify-first-call-args-for create-new-object
+                                     {:kind :constructor}
+                                     :params
+                                     :env))))
 
+; -------------- eval-class -------------------
+
+(deftest eval-class-adds-class-to-env
+  (testing "eval-class adds a class definition to the current environment"
+    (stubbing [modify :value evaluate :other-value extend-env :new-env]
+              (let [env (create-env {})]
+                (is (= (eval-class '(class Foo 3.0) env) "#'Foo"))
+                (verify-call-times-for extend-env 1)
+                (verify-call-times-for evaluate 2)
+                (verify-nth-call-args-for 2 evaluate 3.0 :new-env)
+                (verify-call-times-for modify 1)
+                (verify-first-call-args-for modify
+                                            env
+                                            'Foo
+                                            {:kind :class
+                                             :env :new-env
+                                             :parent nil})))))
+
+; -------------- make-constructor -------------------
+
+(deftest make-constructor-wraps-class-constructor
+  (testing "make-constructor creates a special function that on invoke creates
+           new objects"
+    (let [constructor (make-constructor 'Class)]
+      (are [property value] 
+           (= (get constructor property) value)
+           (:kind :constructor)
+           (:class 'Class)))))
+
+; -------------- make-default-initialize -------------------
+
+(deftest make-default-initialize-creates-ast
+  (testing "make-default-initialize makes ast with function returning nil 
+           when no parent is given"
+    (is (= (make-default-initialize nil) '(function initialize () nil))))
+  (testing "make-default-initialize makes ast with function calling
+           super.initialize when parent is given"
+    (is (= (make-default-initialize true)
+           '(function initialize () (dot super (initialize)))))))
+
+; -------------- eval-dot -------------------
+
+(deftest eval-dot-evaluates-object-field
+  (testing "Eval-dot evaluates expressions like `obj.<expr>` (obj.a = 3) in the
+           context of obj."
+    (stubbing [evaluate (fn [x y] (if (= y {}) {:env {:x x}} :result))]
+              (is (= (eval-dot (list 'dot :reciever :message) {}) :result))
+              (verify-call-times-for evaluate 2)
+              (verify-first-call-args-for evaluate :reciever {})
+              (verify-nth-call-args-for 2 evaluate :message {:x :reciever
+                                                             :parent {}}))))
+
+; -------------- create-new-object -------------------
+
+(deftest create-new-object-tests
+  (testing "create-new-object creates new object when it has no parent"
+    (stubbing [lookup {:env {:bindings (atom :penv)}}
+               extend-env :new-env
+               modify :modify
+               eval-dot :result]
+              (create-new-object {:class :pclass} '(params) :env)
+              (verify-call-times-for lookup 1)
+              (verify-first-call-args-for lookup :env :pclass)
+              (verify-call-times-for extend-env 1)
+              (verify-first-call-args-for extend-env :penv :env)
+              (verify-call-times-for modify 1)
+              (verify-first-call-args-for modify
+                                          :new-env
+                                          'this
+                                          {:kind :object
+                                           :class :pclass
+                                           :env :new-env})
+              (verify-call-times-for eval-dot 1)
+              (verify-first-call-args-for eval-dot
+                                          '(dot this (initialize params))
+                                          :new-env)))
+  ;(testing "create-new-object creates new object when it has a parent")
+  )
+    
+              
