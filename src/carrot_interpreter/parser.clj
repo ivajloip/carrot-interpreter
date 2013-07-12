@@ -113,8 +113,17 @@
 (def return-stm (bind [_ (token "return") ex expr]
                       (return (list 'return ex))))
 
-(def class-stm (bind [_ (token "class") name identifier body block]
-                      (return (list 'class (symbol name) (begin body)))))
+(def class-stm (bind [_ (token "class")
+                      name identifier
+                      parent (optional (<*> (token "extends") var-ref))
+                      body block]
+                     (return (if parent
+                               (list 'class
+                                     (symbol name)
+                                     (begin body)
+                                     (second parent))
+                               (list 'class (symbol name) (begin body))))))
+  
 
 (def dot-op (bind [object (<|> (<:> funcall) var-ref)
                        _ (token ".")

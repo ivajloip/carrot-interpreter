@@ -200,7 +200,8 @@
   (testing "Parsing a simple class definition"
     (is (= (:value (kern/parse class-stm "class Foo do 
                                             3
-                                          end")) '(class Foo 3.0)))))
+                                          end"))
+           '(class Foo 3.0)))))
 
 (deftest class-stm-parses-class-with-function
   (testing "Parsing a simple class definition with funciton definition"
@@ -210,6 +211,13 @@
                                             end
                                           end"))
            '(class Foo (function test (x) x))))))
+
+(deftest class-stm-parses-class-with-parent
+  (testing "Parsing a class definition with a parent class"
+    (is (= (:value (kern/parse class-stm "class Foo extends Bar do
+                                            3
+                                          end"))
+           '(class Foo 3.0 Bar)))))
 
 (deftest class-stm-parses-class-with-few-function
   (testing "Parsing a simple class definition with a few funciton definition"
