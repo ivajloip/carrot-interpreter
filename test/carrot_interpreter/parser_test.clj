@@ -139,6 +139,18 @@
   (testing "Parsing key-word return fails a variable references"
     (is (not (:ok (kern/parse var-ref "return"))))))
 
+(deftest var-ref-does-not-parse-class
+  (testing "Parsing key-word class fails a variable references"
+    (is (not (:ok (kern/parse var-ref "class"))))))
+
+(deftest var-ref-does-not-parse-module
+  (testing "Parsing key-word module fails a variable references"
+    (is (not (:ok (kern/parse var-ref "module"))))))
+
+(deftest var-ref-does-not-parse-extends
+  (testing "Parsing key-word extends fails a variable references"
+    (is (not (:ok (kern/parse var-ref "extends"))))))
+
 ; -------------- block -------------------
 
 (deftest block-parses-simple-code-block
@@ -161,13 +173,15 @@
 
 (deftest function-def-parses-function-definitions
   (testing "Parsing a function definition"
-    (is (= (:value (kern/parse function-def "def func(a) do\n3\nend")) '(function func (a) 3.0)))))
+    (is (= (:value (kern/parse function-def "def func(a) do\n3\nend"))
+           '(function func (a) 3.0)))))
 
 ; -------------- condition -------------------
 
 (deftest condition-parses-if-expression
   (testing "Parsing a if condition"
-    (is (= (:value (kern/parse condition "if (x == 3) do\n 2\nend")) '(if (== x 3.0) 2.0)))))
+    (is (= (:value (kern/parse condition "if (x == 3) do\n 2\nend"))
+           '(if (== x 3.0) 2.0)))))
 
 (deftest function-def-parses-function-definitions
   (testing "Parsing a function definition"
@@ -194,7 +208,7 @@
     (is (= (:value (kern/parse return-stm "return x * x)"))
            '(return (* x x))))))
 
-; -------------- return-stm -------------------
+; -------------- class-stm -------------------
 
 (deftest class-stm-parses-simplest-class
   (testing "Parsing a simple class definition"

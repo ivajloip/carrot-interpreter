@@ -10,8 +10,6 @@
 (declare class-stm)
 (declare dot-op)
 
-(def key-words #{"end" "do" "def"})
-
 (def assign
   (bind [id identifier
          _ (token "=")
@@ -20,9 +18,7 @@
 
 (def var-ref
   (bind [id identifier]
-    (if (get key-words id)
-      (fail (str id " is a reserved word"))
-      (return (symbol id)))))
+      (return (symbol id))))
 
 (def block
   (bind [_ (token "do")
@@ -115,13 +111,13 @@
 
 (def class-stm (bind [_ (token "class")
                       name identifier
-                      parent (optional (<*> (token "extends") var-ref))
+                      parent (optional (>> (token "extends") var-ref))
                       body block]
                      (return (if parent
                                (list 'class
                                      (symbol name)
                                      (begin body)
-                                     (second parent))
+                                     parent)
                                (list 'class (symbol name) (begin body))))))
   
 
@@ -139,6 +135,8 @@
                     string-lit
                     (<:> (fwd block))
                     (<:> (fwd return-stm))
+                    (<:> class-stm)
+                    (<:> dot-op)
                     expr))
 
 (def program (bind [statements (many1 statement)]
