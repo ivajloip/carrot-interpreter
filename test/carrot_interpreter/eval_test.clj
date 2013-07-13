@@ -98,6 +98,30 @@
              (:env func) env
              (:body func) '(begin x x y))))))
 
+; -------------- eval-module -------------------
+
+(deftest eval-module-adds-module-to-env
+  (testing "eval-module adds a module to the environmet"
+    (let [env (create-env {})]
+      (eval-module [:foo 'Foo '(begin x y)] env)
+      (let [module (get @(:bindings env) 'Foo)]
+        (are [expected actual]
+             (= expected actual)
+             (:kind module) :module
+             (:body module) '(begin x y))))))
+
+; -------------- include-module -------------------
+
+(deftest include-module-adds-module-to-class-env
+  (testing "include-module adds all methods from module to the a class
+           environmet"
+    (stubbing [evaluate :value lookup {:body :body}]
+              (is (= (include-module '(include Bar) :env) :value))
+              (verify-call-times-for evaluate 1)
+              (verify-first-call-args-for evaluate :body :env)
+              (verify-call-times-for lookup 1)
+              (verify-first-call-args-for lookup :env 'Bar))))
+
 ; -------------- modify -------------------
 
 (deftest modify-adds-variable-to-env

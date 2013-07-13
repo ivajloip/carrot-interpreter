@@ -147,6 +147,10 @@
   (testing "Parsing key-word module fails a variable references"
     (is (not (:ok (kern/parse var-ref "module"))))))
 
+(deftest var-ref-does-not-parse-include
+  (testing "Parsing key-word include fails a variable references"
+    (is (not (:ok (kern/parse var-ref "include"))))))
+
 (deftest var-ref-does-not-parse-extends
   (testing "Parsing key-word extends fails a variable references"
     (is (not (:ok (kern/parse var-ref "extends"))))))
@@ -245,6 +249,40 @@
                                             end
                                           end"))
            '(class Foo (begin (function test (x) x) (function foo (x) x)))))))
+
+
+; -------------- module-stm -------------------
+
+(deftest module-stm-parses-module-with-functions
+  (testing "Parsing a module with one function"
+    (is (= (:value (kern/parse module-stm "module Foo do
+                                           def test (x) do
+                                             x
+                                           end
+                                         end"))
+           '(module Foo (function test (x) x)))))
+  (testing "Parsing a module with multiple functions"
+    (is (= (:value (kern/parse module-stm "module Foo do
+                                           def test (x) do
+                                             x
+                                           end
+
+                                           def foo (x) do
+                                             x
+                                           end
+                                         end"))
+           '(module Foo (begin (function test (x) x) (function foo (x) x)))))))
+
+; -------------- module-stm -------------------
+
+(deftest include-stm-parses-module-inclusion
+  (testing "Parsing a module inclusion"
+    (is (= (:value (kern/parse include-stm "include Foo") '(include Foo)))))
+  (testing "Parsing a module inclusion in class"
+    (is (= (:value (kern/parse include-stm "class Bar do
+                                              inlucde Foo
+                                           end")
+                   '(class Bar (include Foo)))))))
 
 ; -------------- dot-op -------------------
 

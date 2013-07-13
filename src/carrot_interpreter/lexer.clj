@@ -16,6 +16,7 @@
                                "return"
                                "def"
                                "class"
+                               "include"
                                "module"]
          :case-sensitive      true
          :trim-newline        false))

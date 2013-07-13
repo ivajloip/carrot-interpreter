@@ -8,6 +8,8 @@
 (declare block)
 (declare return-stm)
 (declare class-stm)
+(declare module-stm)
+(declare include-stm)
 (declare dot-op)
 
 (def assign
@@ -63,7 +65,11 @@
 (def factor
   "Evaluates a number (double), a call to a buil-in function, or an
    expression in parens to (for example) change the order of evaluation."
-  (<|> float-lit (<:> funcall) (<:> var-ref) (parens (fwd expr))))
+  (<|> float-lit
+       (<:> funcall)
+       (<:> (fwd dot-op))
+       (<:> var-ref)
+       (parens (fwd expr))))
 
 (defn prefix1
   [p op]
@@ -110,16 +116,17 @@
                       (return (list 'return ex))))
 
 (def class-stm (bind [_ (token "class")
-                      name identifier
+                      name var-ref
                       parent (optional (>> (token "extends") var-ref))
                       body block]
                      (return (if parent
-                               (list 'class
-                                     (symbol name)
-                                     (begin body)
-                                     parent)
+                               (list 'class name (begin body) parent)
                                (list 'class (symbol name) (begin body))))))
-  
+
+(def module-stm (bind [_ (token "module")
+                      name var-ref
+                      body block]
+                     (return (list 'module name (begin body)))))
 
 (def dot-op (bind [object (<|> (<:> funcall) var-ref)
                        _ (token ".")
@@ -129,6 +136,9 @@
                                  var-ref)]
                       (return (list 'dot object prop))))
 
+(def include-stm (bind [_ (token "include") name var-ref] 
+                       (return (list 'include name))))
+
 (def statement (<|> (<:> assign)
                     condition
                     (<:> (fwd function-def))
@@ -136,7 +146,8 @@
                     (<:> (fwd block))
                     (<:> (fwd return-stm))
                     (<:> class-stm)
-                    (<:> dot-op)
+                    (<:> module-stm)
+                    (<:> include-stm)
                     expr))
 
 (def program (bind [statements (many1 statement)]

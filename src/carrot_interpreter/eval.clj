@@ -114,6 +114,10 @@
              :env class-env}))
   (str "#'" name))
 
+(defn eval-module 
+  [[_ name body] env]
+  (modify env name {:kind :module :body body}))
+
 (defn eval-dot
   [[_ reciever-name message] env]
   (let [reciever (evaluate reciever-name env)]
@@ -125,15 +129,21 @@
         parent (lookup env parent-class)
         new-env (extend-env @(:bindings (:env parent)) env)
         obj {:env new-env :class parent-class :kind :object}]
-    (if-let [parent-parent-class (:parent parent)]
-            (modify new-env 'super (create-new-object
-                                     (lookup (:env parent-parent-class)
-                                             'new)
-                                     params
-                                     new-env)))
+    (when-let [parent-parent-class (:parent parent)]
+      (println :ppc (:env parent-parent-class))
+      (modify new-env 'super (create-new-object
+                               (lookup (:env (lookup env parent-parent-class))
+                                       'new)
+                               params
+                               new-env)))
     (modify new-env 'this obj)
-    (eval-dot (list 'dot 'this (list* 'initialize params)) new-env)))
+    (eval-dot (list 'dot 'this (list* 'initialize params)) new-env)
+    obj))
 
+(defn include-module 
+  [[_ name] env]
+  (let [module (lookup env name)]
+    (evaluate (:body module) env)))
 
 (defn invoke-func
   [func params env]
@@ -160,6 +170,8 @@
         (type? ast 'if) (eval-if ast env)
         (type? ast 'begin) (eval-begin ast env)
         (type? ast 'class) (eval-class ast env)
+        (type? ast 'module) (eval-module ast env)
+        (type? ast 'include) (include-module ast env)
         (type? ast 'dot) (eval-dot ast env)
         :else 
         (invoke-func (evaluate (first ast) env)
