@@ -1,0 +1,43 @@
+class Foo do
+  def initialize() do
+    print(3)
+  end
+  
+  def foo(x, y) do
+    if (y  == 2) do
+      return y
+    end
+
+    x 
+  end
+end
+
+class Bar extends Foo do
+  def initialize(x) do
+    super.initialize()
+    this.y = x + 2
+    print(x)
+  end
+
+  def parent() do
+    super
+  end
+end
+
+module Var do
+  def square(x) do
+    x * x
+  end
+end
+
+class Math do
+  include Var
+end
+
+a = Bar.new(2)
+print(5)
+print(a.y)
+
+a.parent().foo(3, 2)
+a.parent().foo(3, 5)
+
