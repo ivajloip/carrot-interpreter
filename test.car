@@ -1,10 +1,10 @@
-class Foo do
-  def initialize() do
+class Foo 
+  def initialize() 
     print(3)
   end
   
-  def foo(x, y) do
-    if (y  == 2) do
+  def foo(x, y) 
+    if (y  == 2) 
       return y
     end
 
@@ -12,25 +12,25 @@ class Foo do
   end
 end
 
-class Bar extends Foo do
-  def initialize(x) do
+class Bar extends Foo 
+  def initialize(x) 
     super.initialize()
     this.y = x + 2
     print(x)
   end
 
-  def parent() do
+  def parent() 
     super
   end
 end
 
-module Var do
-  def square(x) do
+module Var 
+  def square(x) 
     x * x
   end
 end
 
-class Math do
+class Math 
   include Var
 end
 

@@ -22,19 +22,23 @@
   (bind [id identifier]
       (return (symbol id))))
 
-(def block
-  (bind [_ (token "do")
-         _ new-line
-         stmts (many1 (<*> (fwd statement) (many1 new-line)))
+(def block-part
+  (bind [stmts (many1 (<*> (fwd statement) (many1 new-line)))
          _ (token "end")]
     (return (apply list (map first stmts)))))
 
+(def block
+  (bind [_ (token "do")
+         _ new-line
+         body block-part]
+        (return body)))
 
 (def function-def
   (bind [_ (token "def")
          function-name identifier
          params (parens (sep-by comma identifier))
-         body block]
+         _ new-line
+         body block-part]
     (return (list* 'function
                    (symbol function-name)
                    (apply list (map symbol params))
@@ -49,9 +53,10 @@
 (def condition
   (bind [_ (token "if")
          conditional (parens expr)
-         consequent block
+         _ new-line
+         consequent block-part
          _ (optional new-line)
-         alternative (optional (>> (token "else") block))]
+         alternative (optional (>> (token "else") new-line block-part))]
     (return
       (if alternative
         (list 'if conditional (begin consequent) (begin alternative))
@@ -118,15 +123,17 @@
 (def class-stm (bind [_ (token "class")
                       name var-ref
                       parent (optional (>> (token "extends") var-ref))
-                      body block]
+                      _ new-line
+                      body block-part]
                      (return (if parent
                                (list 'class name (begin body) parent)
                                (list 'class (symbol name) (begin body))))))
 
 (def module-stm (bind [_ (token "module")
-                      name var-ref
-                      body block]
-                     (return (list 'module name (begin body)))))
+                       name var-ref
+                       _ new-line
+                       body block-part]
+                      (return (list 'module name (begin body)))))
 
 (def dot-op (bind [object (<|> (<:> funcall) var-ref)
                        _ (token ".")

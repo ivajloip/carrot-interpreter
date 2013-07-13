@@ -177,20 +177,20 @@
 
 (deftest function-def-parses-function-definitions
   (testing "Parsing a function definition"
-    (is (= (:value (kern/parse function-def "def func(a) do\n3\nend"))
+    (is (= (:value (kern/parse function-def "def func(a)\n3\nend"))
            '(function func (a) 3.0)))))
 
 ; -------------- condition -------------------
 
 (deftest condition-parses-if-expression
   (testing "Parsing a if condition"
-    (is (= (:value (kern/parse condition "if (x == 3) do\n 2\nend"))
+    (is (= (:value (kern/parse condition "if (x == 3)\n 2\nend"))
            '(if (== x 3.0) 2.0)))))
 
 (deftest function-def-parses-function-definitions
   (testing "Parsing a function definition"
     (is (= (:value (kern/parse condition
-                               "if (x == 3) do\n 2\nend else do\n4\nend"))
+                               "if (x == 3)\n 2\nend else\n4\nend"))
            '(if (== x 3.0) 2.0 4.0)))))
 
 ; -------------- funcall -------------------
@@ -216,15 +216,15 @@
 
 (deftest class-stm-parses-simplest-class
   (testing "Parsing a simple class definition"
-    (is (= (:value (kern/parse class-stm "class Foo do 
+    (is (= (:value (kern/parse class-stm "class Foo 
                                             3
                                           end"))
            '(class Foo 3.0)))))
 
 (deftest class-stm-parses-class-with-function
   (testing "Parsing a simple class definition with funciton definition"
-    (is (= (:value (kern/parse class-stm "class Foo do 
-                                            def test (x) do
+    (is (= (:value (kern/parse class-stm "class Foo 
+                                            def test (x)
                                               x
                                             end
                                           end"))
@@ -232,19 +232,19 @@
 
 (deftest class-stm-parses-class-with-parent
   (testing "Parsing a class definition with a parent class"
-    (is (= (:value (kern/parse class-stm "class Foo extends Bar do
+    (is (= (:value (kern/parse class-stm "class Foo extends Bar
                                             3
                                           end"))
            '(class Foo 3.0 Bar)))))
 
 (deftest class-stm-parses-class-with-few-function
   (testing "Parsing a simple class definition with a few funciton definition"
-    (is (= (:value (kern/parse class-stm "class Foo do 
-                                            def test (x) do
+    (is (= (:value (kern/parse class-stm "class Foo 
+                                            def test (x)
                                               x
                                             end
 
-                                            def foo (x) do
+                                            def foo (x)
                                               x
                                             end
                                           end"))
@@ -255,19 +255,19 @@
 
 (deftest module-stm-parses-module-with-functions
   (testing "Parsing a module with one function"
-    (is (= (:value (kern/parse module-stm "module Foo do
-                                           def test (x) do
+    (is (= (:value (kern/parse module-stm "module Foo
+                                           def test (x)
                                              x
                                            end
                                          end"))
            '(module Foo (function test (x) x)))))
   (testing "Parsing a module with multiple functions"
-    (is (= (:value (kern/parse module-stm "module Foo do
-                                           def test (x) do
+    (is (= (:value (kern/parse module-stm "module Foo
+                                           def test (x)
                                              x
                                            end
 
-                                           def foo (x) do
+                                           def foo (x)
                                              x
                                            end
                                          end"))
@@ -279,7 +279,7 @@
   (testing "Parsing a module inclusion"
     (is (= (:value (kern/parse include-stm "include Foo") '(include Foo)))))
   (testing "Parsing a module inclusion in class"
-    (is (= (:value (kern/parse include-stm "class Bar do
+    (is (= (:value (kern/parse include-stm "class Bar
                                               inlucde Foo
                                            end")
                    '(class Bar (include Foo)))))))
