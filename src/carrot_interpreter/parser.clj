@@ -150,7 +150,7 @@
                     (<:> include-stm)
                     expr))
 
-(def program (bind [statements (many1 statement)]
+(def program (bind [statements (many1 (<< statement (many new-line)))]
                    (return (apply list statements))))
 
 (defn parse

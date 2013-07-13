@@ -23,8 +23,9 @@
   [file]
   (let [stmts (-> file slurp (parse program))
         env (default-env)]
+    (println stmts)
     (doseq [stm stmts]
-      (evaluate stm env))))
+      (println (evaluate stm env)))))
 
 (defn read-statement 
   ([] (read-statement []))

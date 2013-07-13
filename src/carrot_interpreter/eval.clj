@@ -116,7 +116,8 @@
 
 (defn eval-module 
   [[_ name body] env]
-  (modify env name {:kind :module :body body}))
+  (modify env name {:kind :module :body body})
+  (str "#'" name))
 
 (defn eval-dot
   [[_ reciever-name message] env]
