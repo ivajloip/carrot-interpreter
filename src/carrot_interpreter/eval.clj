@@ -130,8 +130,7 @@
         parent (lookup env parent-class)
         new-env (extend-env @(:bindings (:env parent)) env)
         obj {:env new-env :class parent-class :kind :object}]
-    (when-let [parent-parent-class (:parent parent)]
-      (println :ppc (:env parent-parent-class))
+    (if-let [parent-parent-class (:parent parent)]
       (modify new-env 'super (create-new-object
                                (lookup (:env (lookup env parent-parent-class))
                                        'new)
